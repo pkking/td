@@ -1,0 +1,104 @@
+# .tekton/trigger.yaml (CORRECTED VERSION)
+apiVersion: triggers.tekton.dev/v1beta1
+kind: TriggerTemplate
+metadata:
+  name: github-pr-template
+spec:
+  params:
+    - name: gitrevision
+    - name: gitrepositoryurl
+    - name: issue_number
+    - name: repo_full_name
+  resourcetemplates:
+    - apiVersion: tekton.dev/v1
+      kind: PipelineRun
+      metadata:
+        generateName: pr-run-
+        labels:
+          tekton.dev/pipeline: github-ci-pipeline
+          app: result-reporter
+        annotations:
+          github.com/issue_number: "$(tt.params.issue_number)"
+          github.com/repo_full_name: "$(tt.params.repo_full_name)"
+      spec:
+        pipelineRef:
+          name: github-ci-pipeline
+        params:
+          - name: revision
+            value: $(tt.params.gitrevision)
+          - name: repoUrl
+            value: $(tt.params.gitrepositoryurl)
+        workspaces:
+          - name: shared-data
+            volumeClaimTemplate:
+              spec:
+                accessModes:
+                  - ReadWriteOnce
+                resources:
+                  requests:
+                    storage: 1Gi
+---
+apiVersion: triggers.tekton.dev/v1beta1
+kind: TriggerBinding
+metadata:
+  name: github-pr-binding
+spec:
+  params:
+    - name: gitrevision
+      value: $(body.pull_request.head.sha)
+    - name: gitrepositoryurl
+      value: $(body.pull_request.head.repo.clone_url)
+    - name: issue_number
+      value: $(body.pull_request.number)
+    - name: repo_full_name
+      value: $(body.repository.full_name)
+---
+apiVersion: triggers.tekton.dev/v1beta1
+kind: TriggerBinding
+metadata:
+  name: github-comment-binding
+spec:
+  params:
+    - name: gitrevision
+      value: $(body.repository.default_branch)
+    - name: gitrepositoryurl
+      value: $(body.repository.clone_url)
+    - name: issue_number
+      value: $(body.issue.number)
+    - name: repo_full_name
+      value: $(body.repository.full_name)
+---
+apiVersion: triggers.tekton.dev/v1beta1
+kind: EventListener
+metadata:
+  name: github-listener
+spec:
+  serviceAccountName: tekton-triggers-sa # 确保这个 SA 存在并有权限
+  triggers:
+    - name: pr-trigger
+      bindings:
+        - ref: github-pr-binding
+      template:
+        ref: github-pr-template
+      interceptors:
+        - ref:
+            name: "github"
+          params:
+            - name: "secretRef"
+              value:
+                secretName: "github-webhook-secret"
+                secretKey: "secret"
+            - name: "eventTypes"
+              value: ["pull_request"]
+    - name: comment-trigger
+      bindings:
+        - ref: github-comment-binding
+      template:
+        ref: github-pr-template
+      interceptors:
+        # 这是被修正的部分 - 使用新的标准语法
+        - ref:
+            name: "cel"
+          params:
+            - name: "filter"
+              value: "body.action == 'created' && body.comment.body.contains('/run-script')"

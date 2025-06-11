@@ -1,0 +1,25 @@
+# .tekton/pipeline.yaml
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: github-ci-pipeline
+spec:
+  params:
+    - name: repoUrl
+      description: The git repository URL.
+    - name: revision
+      description: The git revision.
+  workspaces:
+    - name: shared-data
+  tasks:
+    - name: run-script-from-repo
+      taskRef:
+        name: run-repo-script
+      params:
+        - name: repoUrl
+          value: $(params.repoUrl)
+        - name: revision
+          value: $(params.revision)
+      workspaces:
+        - name: source
+          workspace: shared-data

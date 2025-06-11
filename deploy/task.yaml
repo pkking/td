@@ -1,0 +1,39 @@
+# deploy/task.yaml (CORRECTED)
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: run-repo-script
+spec:
+  description: >-
+    This task clones a repository, checks out a specific revision,
+    and runs a custom script from within that repo.
+  params:
+    - name: repoUrl
+      description: The git repository URL to clone from.
+    - name: revision
+      description: The git revision to check out.
+  workspaces:
+    - name: source
+      description: A workspace for the cloned repository.
+  steps:
+    - name: git-clone
+      image: gcr.io/tekton-releases/github.com/tektoncd/pipeline/cmd/git-init:latest
+      script: |
+        set -e
+        git clone "$(params.repoUrl)" "$(workspaces.source.path)"
+        cd "$(workspaces.source.path)"
+        git checkout "$(params.revision)"
+      # The conflicting "volumeMounts" section has been REMOVED from this step.
+
+    - name: run-the-script
+      image: alpine:3.18
+      workingDir: $(workspaces.source.path)
+      script: |
+        set -e
+        if [ ! -f "scripts/run.sh" ]; then
+          echo "Error: scripts/run.sh not found!"
+          exit 1
+        fi
+        
+        chmod +x scripts/run.sh
+        ./scripts/run.sh
