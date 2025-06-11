@@ -73,6 +73,9 @@ kind: EventListener
 metadata:
   name: github-listener
 spec:
+  resources:
+    kubernetesResource:
+      serviceType: LoadBalancer
   serviceAccountName: tekton-triggers-sa # 确保这个 SA 存在并有权限
   triggers:
     - name: pr-trigger
