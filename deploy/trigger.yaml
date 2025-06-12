@@ -123,7 +123,7 @@ metadata:
   name: triggers-example-eventlistener-binding
 subjects:
 - kind: ServiceAccount
-  name: tekton-robot
+  name: tekton-triggers-sa
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -135,7 +135,7 @@ metadata:
   name: triggers-example-eventlistener-clusterbinding
 subjects:
 - kind: ServiceAccount
-  name: tekton-robot
+  name: tekton-triggers-sa
   namespace: default
 roleRef:
   apiGroup: rbac.authorization.k8s.io
