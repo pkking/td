@@ -105,3 +105,31 @@ spec:
           params:
             - name: "filter"
               value: "body.action == 'created' && body.comment.body.contains('/run-script')"
+---
+# ----------------------------------------------------------------------------
+#  推荐版本: 引用 Tekton 自带的 ClusterRole
+#  这比完全手写 Role 更简洁、更可靠
+# ----------------------------------------------------------------------------
+
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: tekton-triggers-sa
+  # 确保这个 ServiceAccount 和你的 EventListener 在同一个 namespace
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: tekton-triggers-sa-binding
+spec:
+  # "who": 将权限授予给谁
+  subjects:
+    - kind: ServiceAccount
+      name: tekton-triggers-sa
+  # "what": 授予什么权限
+  # 这里我们不再指向自己写的 Role，而是直接引用 Tekton 安装时自带的 ClusterRole
+  roleRef:
+    kind: ClusterRole
+    name: tekton-triggers-eventlistener-roles # <-- 核心变化在这里
+    apiGroup: rbac.authorization.k8s.io
