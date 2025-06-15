@@ -1,0 +1,124 @@
+apiVersion: triggers.tekton.dev/v1beta1
+kind: EventListener
+metadata:
+  name: gitcode-listener
+spec:
+  resources:
+    kubernetesResource:
+      serviceType: LoadBalancer
+  serviceAccountName: tekton-triggers-sa # 确保这个 SA 存在并有权限
+  triggers:
+    - name: pr-trigger
+      bindings:
+        - ref: gitcode-pr-binding
+      template:
+        ref: gitcode-pr-template
+      interceptors:
+        - ref:
+            name: "gitcode"
+          params:
+            - name: "secretRef"
+              value:
+                secretName: "gitcode-webhook-secret"
+                secretKey: "secretToken"
+            - name: "eventTypes"
+              value: ["Merge Requests Hook"]
+    - name: comment-trigger
+      bindings:
+        - ref: gitcode-comment-binding
+      template:
+        ref: gitcode-pr-template
+      interceptors:
+        - ref:
+            name: "gitcode"
+          params:
+            - name: "secretRef"
+              value:
+                secretName: "gitcode-webhook-secret"
+                secretKey: "secretToken"
+            - name: "eventTypes"
+              value: ["Issue Hook"]
+    - name: push-trigger
+      bindings:
+        - ref: gitcode-comment-binding
+      template:
+        ref: gitcode-pr-template
+      interceptors:
+        - ref:
+            name: "gitcode"
+          params:
+            - name: "secretRef"
+              value:
+                secretName: "gitcode-webhook-secret"
+                secretKey: "secretToken"
+            - name: "eventTypes"
+              value: ["Push Hook"]
+---
+apiVersion: triggers.tekton.dev/v1beta1
+kind: TriggerTemplate
+metadata:
+  name: gitcode-pr-template
+spec:
+  params:
+    - name: gitrevision
+    - name: gitrepositoryurl
+    - name: issue_number
+    - name: repo_full_name
+  resourcetemplates:
+    - apiVersion: tekton.dev/v1
+      kind: PipelineRun
+      metadata:
+        generateName: gitcode-pr-run-
+        labels:
+          tekton.dev/pipeline: ci-pipeline
+          app: result-reporter
+        annotations:
+          gitcode.com/issue_number: "$(tt.params.issue_number)"
+          gitcode.com/repo_full_name: "$(tt.params.repo_full_name)"
+      spec:
+        pipelineRef:
+          name: ci-pipeline
+        params:
+          - name: revision
+            value: $(tt.params.gitrevision)
+          - name: repoUrl
+            value: $(tt.params.gitrepositoryurl)
+        workspaces:
+          - name: shared-data
+            volumeClaimTemplate:
+              spec:
+                accessModes:
+                  - ReadWriteOnce
+                resources:
+                  requests:
+                    storage: 1Gi
+---
+apiVersion: triggers.tekton.dev/v1beta1
+kind: TriggerBinding
+metadata:
+  name: gitcode-pr-binding
+spec:
+  params:
+    - name: gitrevision
+      value: $(body.pull_request.head.sha)
+    - name: gitrepositoryurl
+      value: $(body.pull_request.head.repo.clone_url)
+    - name: issue_number
+      value: $(body.pull_request.number)
+    - name: repo_full_name
+      value: $(body.repository.full_name)
+---
+apiVersion: triggers.tekton.dev/v1beta1
+kind: TriggerBinding
+metadata:
+  name: gitcode-comment-binding
+spec:
+  params:
+    - name: gitrevision
+      value: $(body.repository.default_branch)
+    - name: gitrepositoryurl
+      value: $(body.repository.clone_url)
+    - name: issue_number
+      value: $(body.issue.number)
+    - name: repo_full_name
+      value: $(body.repository.full_name)

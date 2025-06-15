@@ -1,18 +1,18 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: gitee-interceptor-listener
+  name: gitcode-interceptor-listener
   labels:
-    app: gitee-interceptor
+    app: gitcode-interceptor
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: gitee-interceptor
+      app: gitcode-interceptor
   template:
     metadata:
       labels:
-        app: gitee-interceptor
+        app: gitcode-interceptor
     spec:
       securityContext:
         runAsUser: 1001
@@ -23,7 +23,7 @@ spec:
       serviceAccountName: tekton-triggers-sa # 使用 triggers 的 sa 获取权限
       containers:
         - name: listener
-          image: pkking/gitee-tekton-interceptor:latest
+          image: pkking/gitcode-tekton-interceptor:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 8080
@@ -36,10 +36,10 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: gitee-interceptor-service
+  name: gitcode-interceptor-service
 spec:
   selector:
-    app: gitee-interceptor
+    app: gitcode-interceptor
   ports:
     - protocol: TCP
       port: 80
@@ -48,11 +48,11 @@ spec:
 apiVersion: triggers.tekton.dev/v1alpha1
 kind: ClusterInterceptor
 metadata:
-  # 这个 name ("gitee") 必须和 main.go 中注册的 key 一致
-  name: gitee
+  # 这个 name ("gitcode") 必须和 main.go 中注册的 key 一致
+  name: gitcode
 spec:
   clientConfig:
     service:
-      name: gitee-interceptor-service
+      name: gitcode-interceptor-service
       namespace: default
       port: 80

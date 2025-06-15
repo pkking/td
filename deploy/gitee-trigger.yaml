@@ -1,0 +1,124 @@
+apiVersion: triggers.tekton.dev/v1beta1
+kind: EventListener
+metadata:
+  name: gitee-listener
+spec:
+  resources:
+    kubernetesResource:
+      serviceType: LoadBalancer
+  serviceAccountName: tekton-triggers-sa # 确保这个 SA 存在并有权限
+  triggers:
+    - name: pr-trigger
+      bindings:
+        - ref: gitee-pr-binding
+      template:
+        ref: gitee-pr-template
+      interceptors:
+        - ref:
+            name: "gitee"
+          params:
+            - name: "secretRef"
+              value:
+                secretName: "gitee-webhook-secret"
+                secretKey: "secretToken"
+            - name: "eventTypes"
+              value: ["Merge Requests Hook"]
+    - name: comment-trigger
+      bindings:
+        - ref: gitee-comment-binding
+      template:
+        ref: gitee-pr-template
+      interceptors:
+        - ref:
+            name: "gitee"
+          params:
+            - name: "secretRef"
+              value:
+                secretName: "gitee-webhook-secret"
+                secretKey: "secretToken"
+            - name: "eventTypes"
+              value: ["Issue Hook"]
+    - name: push-trigger
+      bindings:
+        - ref: gitee-comment-binding
+      template:
+        ref: gitee-pr-template
+      interceptors:
+        - ref:
+            name: "gitee"
+          params:
+            - name: "secretRef"
+              value:
+                secretName: "gitee-webhook-secret"
+                secretKey: "secretToken"
+            - name: "eventTypes"
+              value: ["Push Hook"]
+---
+apiVersion: triggers.tekton.dev/v1beta1
+kind: TriggerTemplate
+metadata:
+  name: gitee-pr-template
+spec:
+  params:
+    - name: gitrevision
+    - name: gitrepositoryurl
+    - name: issue_number
+    - name: repo_full_name
+  resourcetemplates:
+    - apiVersion: tekton.dev/v1
+      kind: PipelineRun
+      metadata:
+        generateName: gitee-pr-run-
+        labels:
+          tekton.dev/pipeline: ci-pipeline
+          app: result-reporter
+        annotations:
+          gitee.com/issue_number: "$(tt.params.issue_number)"
+          gitee.com/repo_full_name: "$(tt.params.repo_full_name)"
+      spec:
+        pipelineRef:
+          name: ci-pipeline
+        params:
+          - name: revision
+            value: $(tt.params.gitrevision)
+          - name: repoUrl
+            value: $(tt.params.gitrepositoryurl)
+        workspaces:
+          - name: shared-data
+            volumeClaimTemplate:
+              spec:
+                accessModes:
+                  - ReadWriteOnce
+                resources:
+                  requests:
+                    storage: 1Gi
+---
+apiVersion: triggers.tekton.dev/v1beta1
+kind: TriggerBinding
+metadata:
+  name: gitee-pr-binding
+spec:
+  params:
+    - name: gitrevision
+      value: $(body.pull_request.head.sha)
+    - name: gitrepositoryurl
+      value: $(body.pull_request.head.repo.clone_url)
+    - name: issue_number
+      value: $(body.pull_request.number)
+    - name: repo_full_name
+      value: $(body.repository.full_name)
+---
+apiVersion: triggers.tekton.dev/v1beta1
+kind: TriggerBinding
+metadata:
+  name: gitee-comment-binding
+spec:
+  params:
+    - name: gitrevision
+      value: $(body.repository.default_branch)
+    - name: gitrepositoryurl
+      value: $(body.repository.clone_url)
+    - name: issue_number
+      value: $(body.issue.number)
+    - name: repo_full_name
+      value: $(body.repository.full_name)

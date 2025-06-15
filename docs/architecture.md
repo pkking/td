@@ -183,7 +183,7 @@ spec:
         secretName: github-secret
 ```
 
-**流水线: `pipeline-github-ci.yaml`**
+**流水线: `ci-pipeline.yaml`**
 *此流水线编排上述两个任务，将第一个任务的结果传递给第二个任务。*
 ```yaml
 apiVersion: tekton.dev/v1
@@ -326,7 +326,7 @@ spec:
     ```bash
     kubectl apply -f task-run-ci-script.yaml
     kubectl apply -f task-post-github-comment.yaml
-    kubectl apply -f pipeline-github-ci.yaml
+    kubectl apply -f ci-pipeline.yaml
     kubectl apply -f binding-github-comment.yaml
     kubectl apply -f template-ci-pipeline.yaml
     # Note: Create necessary RBAC for the ServiceAccount 'tekton-triggers-sa'

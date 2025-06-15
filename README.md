@@ -25,7 +25,24 @@ cloud-provider-kind # run cloud-provider-kind as a foreground process
 
 ### apply our tekton deployment
 ```bash
-kubectl apply -f deploy/trigger.yaml # trigger, serviceaccount
+kubectl apply -f deploy/sa.yaml
+kubectl apply -f deploy/gitee-interceptor.yaml # interceptor
+kubectl apply -f deploy/gitcode-interceptor.yaml # interceptor
+kubectl apply -f deploy/gitee-trigger.yaml # trigger
+kubectl apply -f deploy/gitcode-trigger.yaml # trigger
+kubectl apply -f deploy/github-trigger.yaml # trigger
 kubectl apply -f deploy/pipeline.yaml # pipeline called by trigger
 kubectl apply -f deploy/task.yaml # task called by pipeline
+```
+
+### create webhook validate secret
+```bash
+kubectl create secret generic gitee-webhook-secret \
+    --from-literal=secretToken='tokton_webhook_secret' 
+
+kubectl create secret generic github-webhook-secret \
+    --from-literal=secretToken='tokton_webhook_secret' 
+
+kubectl create secret generic gitcode-webhook-secret \
+    --from-literal=secretToken='tokton_webhook_secret' 
 ```

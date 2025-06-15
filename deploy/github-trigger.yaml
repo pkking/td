@@ -15,14 +15,14 @@ spec:
       metadata:
         generateName: pr-run-
         labels:
-          tekton.dev/pipeline: github-ci-pipeline
+          tekton.dev/pipeline: ci-pipeline
           app: result-reporter
         annotations:
           github.com/issue_number: "$(tt.params.issue_number)"
           github.com/repo_full_name: "$(tt.params.repo_full_name)"
       spec:
         pipelineRef:
-          name: github-ci-pipeline
+          name: ci-pipeline
         params:
           - name: revision
             value: $(tt.params.gitrevision)
@@ -105,39 +105,3 @@ spec:
           params:
             - name: "filter"
               value: "body.action == 'created' && body.comment.body.contains('/run-script')"
----
-# ----------------------------------------------------------------------------
-#  最终修正版: 确保所有资源的结构都正确
-# ----------------------------------------------------------------------------
-
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: tekton-triggers-sa
-  # 注意：这里没有 'spec' 字段
-
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
-metadata:
-  name: triggers-example-eventlistener-binding
-subjects:
-- kind: ServiceAccount
-  name: tekton-triggers-sa
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: tekton-triggers-eventlistener-roles
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  name: triggers-example-eventlistener-clusterbinding
-subjects:
-- kind: ServiceAccount
-  name: tekton-triggers-sa
-  namespace: default
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: tekton-triggers-eventlistener-clusterroles

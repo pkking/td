@@ -2,7 +2,7 @@
 apiVersion: tekton.dev/v1
 kind: Pipeline
 metadata:
-  name: github-ci-pipeline
+  name: ci-pipeline
 spec:
   params:
     - name: repoUrl
