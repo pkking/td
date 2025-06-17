@@ -40,7 +40,7 @@ spec:
               value: ["Issue Hook"]
     - name: push-trigger
       bindings:
-        - ref: gitcode-comment-binding
+        - ref: gitcode-push-binding
       template:
         ref: gitcode-pr-template
       interceptors:
@@ -57,12 +57,11 @@ spec:
 apiVersion: triggers.tekton.dev/v1beta1
 kind: TriggerTemplate
 metadata:
-  name: gitcode-pr-template
+  name: gitcode-push-template
 spec:
   params:
     - name: gitrevision
     - name: gitrepositoryurl
-    - name: issue_number
     - name: repo_full_name
   resourcetemplates:
     - apiVersion: tekton.dev/v1
@@ -73,7 +72,6 @@ spec:
           tekton.dev/pipeline: ci-pipeline
           app: result-reporter
         annotations:
-          gitcode.com/issue_number: "$(tt.params.issue_number)"
           gitcode.com/repo_full_name: "$(tt.params.repo_full_name)"
       spec:
         pipelineRef:
@@ -83,6 +81,57 @@ spec:
             value: $(tt.params.gitrevision)
           - name: repoUrl
             value: $(tt.params.gitrepositoryurl)
+        taskRunTemplate:
+          podTemplate:
+            securityContext:
+              runAsNonRoot: true
+              runAsUser: 1001
+              fsGroup: 1001
+        workspaces:
+          - name: shared-data
+            volumeClaimTemplate:
+              spec:
+                accessModes:
+                  - ReadWriteOnce
+                resources:
+                  requests:
+                    storage: 1Gi
+---
+apiVersion: triggers.tekton.dev/v1beta1
+kind: TriggerTemplate
+metadata:
+  name: gitcode-pr-template
+spec:
+  params:
+    - name: gitrevision
+    - name: gitrepositoryurl
+    - name: repo_full_name
+    - name: issue_number
+  resourcetemplates:
+    - apiVersion: tekton.dev/v1
+      kind: PipelineRun
+      metadata:
+        generateName: gitcode-pr-run-
+        labels:
+          tekton.dev/pipeline: ci-pipeline
+          app: result-reporter
+        annotations:
+          gitcode.com/repo_full_name: "$(tt.params.repo_full_name)"
+          gitcode.com/issue_number: "$(tt.params.issue_number)"
+      spec:
+        pipelineRef:
+          name: ci-pipeline
+        params:
+          - name: revision
+            value: $(tt.params.gitrevision)
+          - name: repoUrl
+            value: $(tt.params.gitrepositoryurl)
+        taskRunTemplate:
+          podTemplate:
+            securityContext:
+              runAsNonRoot: true
+              runAsUser: 1001
+              fsGroup: 1001
         workspaces:
           - name: shared-data
             volumeClaimTemplate:

@@ -1,0 +1,5 @@
+FROM openeuler/openeuler:24.03
+RUN dnf -y update --repo OS --repo update && \
+    dnf in -y shadow git --repo OS --repo update
+RUN useradd -u 1001 -U -s /sbin/nologin -m taskuser
+USER 1001:1001
