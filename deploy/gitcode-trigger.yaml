@@ -120,7 +120,14 @@ spec:
           gitcode.com/issue_number: "$(tt.params.issue_number)"
       spec:
         pipelineRef:
-          name: ci-pipeline
+          resolver: git
+          params:
+            - name: url
+              value: $(tt.params.gitrepositoryurl)
+            - name: revision
+              value: $(tt.params.gitrevision)
+            - name: pathInRepo
+              value: ".ci/pipeline.yaml"
         params:
           - name: revision
             value: $(tt.params.gitrevision)
