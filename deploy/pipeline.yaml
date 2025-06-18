@@ -26,6 +26,13 @@ spec:
     - name: run-script-from-repo
       taskRef:
         resolver: git
+        params:
+          - name: url
+            value: $(params.repoUrl)
+          - name: revision
+            value: $(params.revision)
+          - name: pathInRepo
+            value: ".ci/task.yaml"
       params:
         - name: repoUrl
           value: $(params.repoUrl)
