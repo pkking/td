@@ -12,9 +12,20 @@ spec:
   workspaces:
     - name: shared-data
   tasks:
+    - name: clone-repo
+      taskRef:
+        name: git-clone
+      params:
+        - name: url
+          value: $(params.repoUrl)
+        - name: revision
+          value: $(params.revision)
+      workspaces:
+        - name: output
+          workspace: shared-data
     - name: run-script-from-repo
       taskRef:
-        name: run-repo-script
+        resolver: git
       params:
         - name: repoUrl
           value: $(params.repoUrl)

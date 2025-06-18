@@ -22,12 +22,12 @@ spec:
                 secretName: "gitcode-webhook-secret"
                 secretKey: "secretToken"
             - name: "eventTypes"
-              value: ["Merge Requests Hook"]
-    - name: comment-trigger
+              value: ["Merge Request Hook"]
+    - name: issue-trigger
       bindings:
-        - ref: gitcode-comment-binding
+        - ref: gitcode-issue-binding
       template:
-        ref: gitcode-pr-template
+        ref: gitcode-issue-template
       interceptors:
         - ref:
             name: "gitcode"
@@ -42,7 +42,7 @@ spec:
       bindings:
         - ref: gitcode-push-binding
       template:
-        ref: gitcode-pr-template
+        ref: gitcode-push-template
       interceptors:
         - ref:
             name: "gitcode"
@@ -53,49 +53,21 @@ spec:
                 secretKey: "secretToken"
             - name: "eventTypes"
               value: ["Push Hook"]
----
-apiVersion: triggers.tekton.dev/v1beta1
-kind: TriggerTemplate
-metadata:
-  name: gitcode-push-template
-spec:
-  params:
-    - name: gitrevision
-    - name: gitrepositoryurl
-    - name: repo_full_name
-  resourcetemplates:
-    - apiVersion: tekton.dev/v1
-      kind: PipelineRun
-      metadata:
-        generateName: gitcode-pr-run-
-        labels:
-          tekton.dev/pipeline: ci-pipeline
-          app: result-reporter
-        annotations:
-          gitcode.com/repo_full_name: "$(tt.params.repo_full_name)"
-      spec:
-        pipelineRef:
-          name: ci-pipeline
-        params:
-          - name: revision
-            value: $(tt.params.gitrevision)
-          - name: repoUrl
-            value: $(tt.params.gitrepositoryurl)
-        taskRunTemplate:
-          podTemplate:
-            securityContext:
-              runAsNonRoot: true
-              runAsUser: 1001
-              fsGroup: 1001
-        workspaces:
-          - name: shared-data
-            volumeClaimTemplate:
-              spec:
-                accessModes:
-                  - ReadWriteOnce
-                resources:
-                  requests:
-                    storage: 1Gi
+    - name: comment-trigger
+      bindings:
+        - ref: gitcode-comment-binding
+      template:
+        ref: gitcode-comment-template
+      interceptors:
+        - ref:
+            name: "gitcode"
+          params:
+            - name: "secretRef"
+              value:
+                secretName: "gitcode-webhook-secret"
+                secretKey: "secretToken"
+            - name: "eventTypes"
+              value: ["Note Hook"]
 ---
 apiVersion: triggers.tekton.dev/v1beta1
 kind: TriggerTemplate
@@ -137,8 +109,141 @@ spec:
           podTemplate:
             securityContext:
               runAsNonRoot: true
-              runAsUser: 1001
-              fsGroup: 1001
+              runAsUser: 65532
+              fsGroup: 65532
+        workspaces:
+          - name: shared-data
+            volumeClaimTemplate:
+              spec:
+                accessModes:
+                  - ReadWriteOnce
+                resources:
+                  requests:
+                    storage: 1Gi
+---
+apiVersion: triggers.tekton.dev/v1beta1
+kind: TriggerTemplate
+metadata:
+  name: gitcode-push-template
+spec:
+  params:
+    - name: gitrevision
+    - name: gitrepositoryurl
+    - name: repo_full_name
+  resourcetemplates:
+    - apiVersion: tekton.dev/v1
+      kind: PipelineRun
+      metadata:
+        generateName: gitcode-push-run-
+        labels:
+          tekton.dev/pipeline: ci-pipeline
+          app: result-reporter
+        annotations:
+          gitcode.com/repo_full_name: "$(tt.params.repo_full_name)"
+      spec:
+        pipelineRef:
+          name: ci-pipeline
+        params:
+          - name: revision
+            value: $(tt.params.gitrevision)
+          - name: repoUrl
+            value: $(tt.params.gitrepositoryurl)
+        taskRunTemplate:
+          podTemplate:
+            securityContext:
+              runAsNonRoot: true
+              runAsUser: 65532
+              fsGroup: 65532
+        workspaces:
+          - name: shared-data
+            volumeClaimTemplate:
+              spec:
+                accessModes:
+                  - ReadWriteOnce
+                resources:
+                  requests:
+                    storage: 1Gi
+---
+apiVersion: triggers.tekton.dev/v1beta1
+kind: TriggerTemplate
+metadata:
+  name: gitcode-issue-template
+spec:
+  params:
+    - name: gitrevision
+    - name: gitrepositoryurl
+    - name: repo_full_name
+    - name: issue_number
+  resourcetemplates:
+    - apiVersion: tekton.dev/v1
+      kind: PipelineRun
+      metadata:
+        generateName: gitcode-issue-run-
+        labels:
+          tekton.dev/pipeline: ci-pipeline
+          app: result-reporter
+        annotations:
+          gitcode.com/repo_full_name: "$(tt.params.repo_full_name)"
+          gitcode.com/issue_number: "$(tt.params.issue_number)"
+      spec:
+        pipelineRef:
+          name: ci-pipeline
+        params:
+          - name: revision
+            value: $(tt.params.gitrevision)
+          - name: repoUrl
+            value: $(tt.params.gitrepositoryurl)
+        taskRunTemplate:
+          podTemplate:
+            securityContext:
+              runAsNonRoot: true
+              runAsUser: 65532
+              fsGroup: 65532
+        workspaces:
+          - name: shared-data
+            volumeClaimTemplate:
+              spec:
+                accessModes:
+                  - ReadWriteOnce
+                resources:
+                  requests:
+                    storage: 1Gi
+---
+apiVersion: triggers.tekton.dev/v1beta1
+kind: TriggerTemplate
+metadata:
+  name: gitcode-comment-template
+spec:
+  params:
+    - name: gitrevision
+    - name: gitrepositoryurl
+    - name: repo_full_name
+    - name: issue_number
+  resourcetemplates:
+    - apiVersion: tekton.dev/v1
+      kind: PipelineRun
+      metadata:
+        generateName: gitcode-comment-run-
+        labels:
+          tekton.dev/pipeline: ci-pipeline
+          app: result-reporter
+        annotations:
+          gitcode.com/repo_full_name: "$(tt.params.repo_full_name)"
+          gitcode.com/issue_number: "$(tt.params.issue_number)"
+      spec:
+        pipelineRef:
+          name: ci-pipeline
+        params:
+          - name: revision
+            value: $(tt.params.gitrevision)
+          - name: repoUrl
+            value: $(tt.params.gitrepositoryurl)
+        taskRunTemplate:
+          podTemplate:
+            securityContext:
+              runAsNonRoot: true
+              runAsUser: 65532
+              fsGroup: 65532
         workspaces:
           - name: shared-data
             volumeClaimTemplate:
@@ -156,28 +261,28 @@ metadata:
 spec:
   params:
     - name: gitrevision
-      value: $(body.pull_request.head.sha)
+      value: $(body.object_attributes.last_commit.id)
     - name: gitrepositoryurl
-      value: $(body.pull_request.head.repo.clone_url)
+      value: $(body.project.git_http_url)
     - name: issue_number
-      value: $(body.pull_request.number)
+      value: $(body.object_attributes.iid)
     - name: repo_full_name
-      value: $(body.repository.full_name)
+      value: $(body.project.path_with_namespace)
 ---
 apiVersion: triggers.tekton.dev/v1beta1
 kind: TriggerBinding
 metadata:
-  name: gitcode-comment-binding
+  name: gitcode-issue-binding
 spec:
   params:
     - name: gitrevision
-      value: $(body.repository.default_branch)
+      value: $(body.project.default_branch)
     - name: gitrepositoryurl
-      value: $(body.repository.clone_url)
+      value: $(body.project.git_http_url)
     - name: issue_number
-      value: $(body.issue.number)
+      value: $(body.object_attributes.iid)
     - name: repo_full_name
-      value: $(body.repository.full_name)
+      value: $(body.project.path_with_namespace)
 ---
 apiVersion: triggers.tekton.dev/v1beta1
 kind: TriggerBinding
@@ -191,3 +296,18 @@ spec:
       value: $(body.repository.git_http_url)
     - name: repo_full_name
       value: $(body.project.path_with_namespace)
+---
+apiVersion: triggers.tekton.dev/v1beta1
+kind: TriggerBinding
+metadata:
+  name: gitcode-comment-binding
+spec:
+  params:
+    - name: gitrepositoryurl
+      value: $(body.repository.git_http_url)
+    - name: repo_full_name
+      value: $(body.project.path_with_namespace)
+    - name: comment
+      value: $(body.object_attributes.note)
+    - name: comment_type
+      value: $(body.object_attributes.noteable_type)
